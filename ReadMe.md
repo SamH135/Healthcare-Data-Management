@@ -1,23 +1,30 @@
+**THE SERVER IS CURRENTLY SET UP FOR LOCAL TESTING**
 
 
-Node.js SETUP:
+*Server-Side*
 
-1. Install node.js from https://nodejs.org/en/. Make sure to install the latest version of LTS (Long Term Support) release line, which currently
+    Node.js SETUP:
 
-2. Run the following commands in your IDE terminal
+    1. Install node.js from https://nodejs.org/en/. Make sure to install the latest version of LTS (Long Term Support) release line, which currently
 
-        npm init -y
+    2. Run the following commands in your IDE terminal
 
-        npm install ws express firebase nodemon
+            npm init -y
 
-        node app.js
+            npm install ws express firebase nodemon https
 
-            NOTE: you can add the "start" to your scripts file in the package.json to use npm start instead of node app.js:
-                  "scripts": {
-                  "test": "echo \"Error: no test specified\" && exit 1",
-                  "start": "node app.js"
-                  },
+            node app.js
 
+                NOTE: you can add the "start" to your scripts file in the package.json to use npm start instead of node app.js:
+                    "scripts": {
+                    "test": "echo \"Error: no test specified\" && exit 1",
+                    "start": "node app.js"
+                    },
+
+*Client-Side*
+    Python scripts connect to the server via  websockets using the `websockets` library. 
+
+    Regular users will connect through the web apps front-end via http or https
 
 
 

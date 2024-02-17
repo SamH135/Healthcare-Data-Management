@@ -1,25 +1,49 @@
 const express = require('express');
-// const firebase = require('firebase/app');
-// const firebaseDatabase = require('firebase/database'); 
 const http = require('http');
-const WebSocket = require('ws');
+const { WebSocket } = require('ws');
 
-// Initialize Firebase, Express, etc.
 const app = express();
 
+// Create HTTP server from Express app
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-wss.on('connection', (ws) => {
-  console.log('A client connected');
-  
-  ws.on('message', (msg) => {
-    console.log(`Received message: ${msg}`);
-  });
+let connections = [];
 
-  ws.send('Hello from the Node.js server, welcome to the network!');
+wss.on('connection', (ws) => {
+    connections.push(ws);
+
+    ws.on('close', () => {
+        connections = connections.filter((con) => con !== ws);
+    });
+
+    ws.on('message', (msg) => {
+        try {
+            const message = JSON.parse(msg);
+            if (message.type === 'broadcast') {
+                connections.forEach((con) => {
+                    if (con !== ws) {
+                        con.send(JSON.stringify({ message: message.text }));
+                    }
+                });
+            } else {
+                console.log('Invalid message type!', msg);
+            }
+        } catch (error) {
+            console.error('Failed to parse JSON message', msg);
+        }
+    });
+
+    ws.send(JSON.stringify({ message: 'Welcome to the WebSocket server!' }));
 });
 
-server.listen(3000, () => {
-  console.log('Server listening on port 3000'); 
+// Example route for HTTP requests
+app.get('/', (req, res) => {
+    res.send('Hello from the HTTP server!');
+});
+
+// Specify the port using the PORT environment variable provided by Render
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`Server listening on port ${PORT}`);
 });

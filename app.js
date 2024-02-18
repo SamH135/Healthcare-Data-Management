@@ -3,47 +3,33 @@ const http = require('http');
 const { WebSocket } = require('ws');
 
 const app = express();
-
-// Create HTTP server from Express app
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-let connections = [];
 
 wss.on('connection', (ws) => {
-    connections.push(ws);
 
-    ws.on('close', () => {
-        connections = connections.filter((con) => con !== ws);
+  // Send welcome message
+  ws.send('Message from the server: Welcome to the network!');
+
+  // Receive a message from client-side and broadcast it back to all clients
+  ws.on('message', (msg) => {
+    console.log(`Received: ${msg}`);
+    wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(msg);
+      }
     });
+  });
 
-    ws.on('message', (msg) => {
-        try {
-            const message = JSON.parse(msg);
-            if (message.type === 'broadcast') {
-                connections.forEach((con) => {
-                    if (con !== ws) {
-                        con.send(JSON.stringify({ message: message.text }));
-                    }
-                });
-            } else {
-                console.log('Invalid message type!', msg);
-            }
-        } catch (error) {
-            console.error('Failed to parse JSON message', msg);
-        }
-    });
+  // Handle disconnection
+  ws.on('close', () => {
+    console.log('Client disconnected');
+  }); 
 
-    ws.send(JSON.stringify({ message: 'Welcome to the WebSocket server!' }));
 });
 
-// Example route for HTTP requests
-app.get('/', (req, res) => {
-    res.send('Hello from the HTTP server!');
-});
 
-// Specify the port using the PORT environment variable provided by Render
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`Server listening on port ${PORT}`);
+server.listen(3000, () => {
+  console.log('Server listening on port 3000');
 });

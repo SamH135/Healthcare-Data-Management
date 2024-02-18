@@ -1,19 +1,30 @@
-import websockets
-import asyncio
 import json
+import asyncio
+import websockets
 
 
 async def connect():
-    # TESTING
-    uri = "ws://localhost:3000"  # to connect to localhost - make sure port number matches Node.js server
+    # Use the appropriate URI based on your server setup
+    uri = "wss://healthcare-data-management.onrender.com"  # Use wss:// for secure connection
+    # uri = "ws://localhost:3000"
 
-    # DEPLOYMENT
-    # uri = "wss://example.render.com:8080"  # Use wss:// for secure connections - need to modify server to accept wss
+    try:
+        async with websockets.connect(uri) as websocket:
+            # Send initial message
+            await websocket.send(json.dumps({"message": "Hello!"}))
 
-    async with websockets.connect(uri) as websocket:
-        await websocket.send(json.dumps({"message": "Hello from Python!"}))
-        response = await websocket.recv()
-        print(response)
+            # Continuously listen for messages from the server
+            while True:
+                response = await websocket.recv()
+                print(response)
 
+    except websockets.WebSocketException as e:
+        print("Connection error!", e)
 
-asyncio.run(connect())
+    except Exception as e:
+        print("Unexpected error!", e)
+
+try:
+    asyncio.run(connect())
+except KeyboardInterrupt:
+    print("Program interrupted")

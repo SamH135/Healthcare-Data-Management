@@ -218,7 +218,6 @@ app.post('/requestData', (req, res) => {
 
 
 
-
 // Function to send data request to the server
 function requestData(searchType, searchTerm) {
   const query = {

@@ -11,7 +11,7 @@
 
             npm init -y
 
-            npm install ws express firebase nodemon https
+            npm install ws express nodemon https express-handlebars express-session handlebars hbs jsonwebtoken path bootstrap uuid body-parser
 
             node app.js
 

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Client</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        #messages { margin-bottom: 20px; border: 1px solid #ddd; padding: 10px; }
+        #connections { margin-bottom: 20px; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h2>WebSocket Test Client</h2>
+    <div id="messages"></div>
+    <div id="connections"><h3>Active Connections</h3></div>
+    <input type="text" id="messageInput" placeholder="Type your message here..." />
+    <button onclick="sendMessage()">Send Message</button>
+    <button onclick="closeConnection()">Close My Connection</button>
+
+    <script>
+        var ws;
+
+        function connect() {
+            ws = new WebSocket('ws://localhost:3000');
+
+            ws.onopen = function(event) {
+                logMessage('Connected to the server.');
+                // Request the server for the list of connections
+                ws.send(JSON.stringify({ action: "listConnections" }));
+            };
+
+            ws.onmessage = function(event) {
+                // Check if the message is about connections
+                try {
+                    const data = JSON.parse(event.data);
+                    if(data.connections) {
+                        updateConnectionsList(data.connections);
+                    } else {
+                        logMessage('From Server: ' + event.data);
+                    }
+                } catch(e) {
+                    logMessage('From Server: ' + event.data);
+                }
+            };
+
+            ws.onclose = function(event) {
+                logMessage('Disconnected from the server.');
+            };
+
+            ws.onerror = function(event) {
+                logMessage('Error: ' + event.data);
+            };
+        }
+
+        function sendMessage() {
+            var message = document.getElementById('messageInput').value;
+            if (message && ws) {
+                ws.send(message);
+                logMessage('To Server: ' + message);
+                document.getElementById('messageInput').value = ''; // Clear input after sending
+            }
+        }
+
+        function closeConnection() {
+            if (ws) {
+                ws.close();
+                logMessage('Connection closed.');
+            }
+        }
+
+        function logMessage(message) {
+            var messagesDiv = document.getElementById('messages');
+            messagesDiv.innerHTML += message + '<br/>';
+            messagesDiv.scrollTop = messagesDiv.scrollHeight; // Scroll to the bottom
+        }
+
+        function updateConnectionsList(connections) {
+            const connectionsDiv = document.getElementById('connections');
+            connectionsDiv.innerHTML = '<h3>Active Connections</h3>'; // Reset list
+            connections.forEach(conn => {
+                connectionsDiv.innerHTML += `<div>${conn.id} - <button onclick="requestCloseConnection('${conn.id}')">Close</button></div>`;
+            });
+        }
+
+        function requestCloseConnection(connId) {
+            if (ws) {
+                ws.send(JSON.stringify({ action: "closeConnection", connId: connId }));
+                logMessage(`Requested to close connection ${connId}`);
+            }
+        }
+
+        // Automatically connect when the page loads
+        window.onload = function() {
+            connect();
+        };
+    </script>
+</body>
+</html>

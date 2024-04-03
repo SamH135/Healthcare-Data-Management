@@ -1,5 +1,6 @@
 import json
 from json.decoder import JSONDecodeError
+from collections import defaultdict
 import asyncio
 import websockets
 import hashlib
@@ -83,47 +84,63 @@ class Blockchain:
 
     # find all data related to a single patient
     def search_patient_data(self, search_term):
-        patient_data = {}
+        # Convert search_term to lowercase for case-insensitive search
+        search_term = search_term.lower()
+        patient_data = defaultdict(lambda: {"data": {"condition": set()}})  # Use defaultdict for easy accumulation of data
+
         for block in self.chain:
-            if search_term in (block.data.get("name"), block.data.get("patient_id")):
+            # Convert stored name and patient ID to lowercase for case-insensitive comparison
+            name = block.data.get("name", "").lower()
+            patient_id = block.data.get("patient_id", "").lower()
+            if search_term in (name, patient_id):
                 patient_id = block.data.get("patient_id")
-                if patient_id not in patient_data:
-                    patient_data[patient_id] = {
-                        "timestamp": block.timestamp,
-                        "data": {
-                            "patient_id": patient_id,
-                            "name": block.data.get("name"),
-                            "age": block.data.get("age"),
-                            "condition": set()
-                        }
-                    }
-                patient_data[patient_id]["data"]["condition"].add(block.data.get("condition"))
-                patient_data[patient_id]["data"]["age"] = max(patient_data[patient_id]["data"]["age"],
-                                                              block.data.get("age"))
+                patient_record = patient_data[patient_id]
+                patient_record["timestamp"] = block.timestamp  # Keep track of the latest timestamp
+                # Update the patient record with the latest data, max() used for age to keep the highest age reported
+                patient_record["data"].update({
+                    "patient_id": patient_id,
+                    "name": block.data.get("name"),
+                    "age": max(patient_record["data"].get("age", 0), block.data.get("age"))
+                })
+                patient_record["data"]["condition"].add(block.data.get("condition"))  # Add condition to a set to avoid duplicates
 
         consolidated_data = []
         for data in patient_data.values():
-            data["data"]["condition"] = ", ".join(data["data"]["condition"])
+            data["data"]["condition"] = ", ".join(data["data"]["condition"])  # Convert set of conditions to a string
             consolidated_data.append(data)
 
         return consolidated_data
 
-    # find number of people in each age group with a certain condition
+    # get data to make a bar plot for condition by age group
     def search_condition_by_age_group(self, condition):
-        age_groups = {i: 0 for i in range(0, 110, 10)}
+        # Convert condition to lowercase for case-insensitive comparison
+        condition = condition.lower()
+        age_groups = {i: 0 for i in range(0, 110, 10)}  # Predefine age groups
         for block in self.chain:
-            if block.data.get("condition") == condition:
+            # Check condition in a case-insensitive manner
+            if block.data.get("condition", "").lower() == condition:
                 age = block.data.get("age")
-                age_group = (age // 10) * 10
-                age_groups[age_group] += 1
+                age_group = (age // 10) * 10  # Determine the age group
+                age_groups[age_group] += 1  # Increment the count for the age group
         return {"condition": condition, "age_groups": age_groups}
 
-    # find the number of people with a condition vs the total number
-    # of people in the system
+    # get data to generate a pie chart for the proportion of people with a searched condition
     def search_condition_proportion(self, condition):
-        total_people = len(set(block.data.get("patient_id") for block in self.chain))
-        people_with_condition = len(
-            set(block.data.get("patient_id") for block in self.chain if block.data.get("condition") == condition))
+        # Convert condition to lowercase for case-insensitive comparison
+        condition = condition.lower()
+        patient_ids = set()  # To track unique patients
+        patients_with_condition = set()  # To track unique patients with the specified condition
+
+        for block in self.chain:
+            patient_id = block.data.get("patient_id")
+            name = block.data.get("name")
+            patient_tuple = (patient_id, name)  # Create a tuple of patient ID and name for uniqueness
+            patient_ids.add(patient_tuple)
+            if block.data.get("condition", "").lower() == condition:
+                patients_with_condition.add(patient_tuple)  # Add to set if condition matches
+
+        total_people = len(patient_ids)  # Count of unique patients
+        people_with_condition = len(patients_with_condition)  # Count of unique patients with the specified condition
         return {"condition": condition, "people_with_condition": people_with_condition, "total_people": total_people}
 
 
@@ -296,16 +313,9 @@ class Bot:
             print("Invalid condition")
             return False
 
-        # Enforce domain-specific rules
-        # Example rule: Age must be between 18 and 120
-        if age < 18 or age > 120:
+        # Check if age is between 18 and 130
+        if age < 18 or age > 130:
             print("Age out of range")
-            return False
-
-        # Example rule: Condition must be one of the allowed values
-        allowed_conditions = ["Hypertension", "Diabetes", "Asthma"]
-        if condition not in allowed_conditions:
-            print("Invalid condition")
             return False
 
         # All checks passed
@@ -381,6 +391,7 @@ async def main():
     # clears the chain for testing
     # bot.blockchain.clear_chain()
 
+    # used to initialize some test data in the chain
     # for data in sample_data:
     #     bot.blockchain.add_block(data)
 

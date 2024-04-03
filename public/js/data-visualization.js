@@ -3,47 +3,53 @@ document.addEventListener('DOMContentLoaded', () => {
     const conditionProportionForm = document.getElementById('conditionProportionForm');
     const conditionByAgeGroupForm = document.getElementById('conditionByAgeGroupForm');
 
-    patientDataForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const patientName = e.target.patientName.value;
-        const response = await fetch('/requestData', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ search_type: 'patient_data', search_term: patientName }),
+    if (patientDataForm) {
+        patientDataForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const patientName = e.target.patientName.value;
+            const response = await fetch('/requestData', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ search_type: 'patient_data', search_term: patientName }),
+            });
+            const data = await response.json();
+            renderPatientDataTable(data);
         });
-        const data = await response.json();
-        renderPatientDataTable(data);
-    });
+    }
 
-    conditionProportionForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const condition = e.target.condition.value;
-        const response = await fetch('/requestData', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ search_type: 'condition_proportion', search_term: condition }),
+    if (conditionProportionForm) {
+        conditionProportionForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const condition = e.target.condition.value;
+            const response = await fetch('/requestData', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ search_type: 'condition_proportion', search_term: condition }),
+            });
+            const data = await response.json();
+            renderConditionProportionChart(data);
         });
-        const data = await response.json();
-        renderConditionProportionChart(data);
-    });
+    }
 
-    conditionByAgeGroupForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const condition = e.target.condition.value;
-        const response = await fetch('/requestData', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ search_type: 'condition_by_age_group', search_term: condition }),
+    if (conditionByAgeGroupForm) {
+        conditionByAgeGroupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const condition = e.target.condition.value;
+            const response = await fetch('/requestData', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ search_type: 'condition_by_age_group', search_term: condition }),
+            });
+            const data = await response.json();
+            renderConditionByAgeGroupChart(data);
         });
-        const data = await response.json();
-        renderConditionByAgeGroupChart(data);
-    });
+    }
 
     function renderPatientDataTable(data) {
         console.log("data in table", data);
@@ -61,10 +67,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderConditionProportionChart(data) {
-        const width = 400;
-        const height = 400;
-        const radius = Math.min(width, height) / 2;
-
+        const width = document.getElementById('conditionProportionChart').clientWidth;
+        const height = document.getElementById('conditionProportionChart').clientHeight;
+        const radius = Math.min(width, height) / 2 - 60; // Adjust the radius to make room for the legend
+    
         const svg = d3.select('#conditionProportionChart')
             .html('')
             .append('svg')
@@ -72,45 +78,74 @@ document.addEventListener('DOMContentLoaded', () => {
             .attr('height', height)
             .append('g')
             .attr('transform', `translate(${width / 2}, ${height / 2})`);
-
+    
         const color = d3.scaleOrdinal()
             .domain(['With Condition', 'Without Condition'])
             .range(['#ff7f50', '#1f77b4']);
-
+    
         const pie = d3.pie()
             .value((d) => d.value)
             .sort(null);
-
+    
         const arc = d3.arc()
             .innerRadius(0)
             .outerRadius(radius);
-
+    
         const data_ready = pie([
             { name: 'With Condition', value: data.people_with_condition },
             { name: 'Without Condition', value: data.total_people - data.people_with_condition }
         ]);
-
-        svg.selectAll('path')
+    
+        const slices = svg.selectAll('path')
             .data(data_ready)
             .enter()
-            .append('path')
+            .append('g');
+    
+        slices.append('path')
             .attr('d', arc)
             .attr('fill', (d) => color(d.data.name))
             .attr('stroke', 'white')
             .style('stroke-width', '2px');
 
+        slices.append('text')
+            .attr('transform', (d) => `translate(${arc.centroid(d)})`)
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '50px') // Change to increase font size
+            .attr('fill', 'white') // Set text color on chart
+            .text((d) => d.data.value);
+        
+    
+        const legend = svg.selectAll('.legend')
+            .data(data_ready)
+            .enter()
+            .append('g')
+            .attr('class', 'legend')
+            .attr('transform', (d, i) => `translate(${radius + 20}, ${i * 30 - 30})`);
+    
+        legend.append('rect')
+            .attr('width', 18)
+            .attr('height', 18)
+            .style('fill', (d) => color(d.data.name));
+    
+        legend.append('text')
+            .attr('x', 24)
+            .attr('y', 9)
+            .attr('dy', '.35em')
+            .text((d) => d.data.name);
+    
         svg.append('text')
             .attr('class', 'chart-title')
             .attr('x', 0)
-            .attr('y', -height / 2 + 20)
+            .attr('y', -height / 2 + 40) // Increase this value to push the title lower
             .attr('text-anchor', 'middle')
-            .text(`Proportion of ${data.condition}`);
-    }
+            .attr('font-size', '30px') // Change to increase font size
+            .text(`Proportion of Patients with Condition: ${data.condition}`);
+    } // end of pie chart function
 
     function renderConditionByAgeGroupChart(data) {
-        const width = 600;
-        const height = 400;
-        const margin = { top: 50, right: 20, bottom: 50, left: 60 };
+        const width = document.getElementById('conditionByAgeGroupChart').clientWidth;
+        const height = document.getElementById('conditionByAgeGroupChart').clientHeight;
+        const margin = { top: 40, right: 20, bottom: 40, left: 60 };
 
         const svg = d3.select('#conditionByAgeGroupChart')
             .html('')

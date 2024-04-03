@@ -19,25 +19,32 @@ module.exports = (wss) => {
 
       console.log(`[${timestamp}] Client connected: ${connectionId}`);
 
-      if (!leader) {
-        leader = ws;
-        ws.send(JSON.stringify({ action: "selectLeader", is_leader: true }));
-        console.log(`[${timestamp}] Bot ${ws.id} is now the leader.`);
-      } else {
-        ws.send(JSON.stringify({ action: "selectLeader", is_leader: false }));
-      }
+      ws.isBot = false; // Initialize isBot property to false
 
       ws.on('message', (message) => {
         try {
           const msg = JSON.parse(message);
           console.log(`[${timestamp}] Received: ${message}`);
-
-          if (msg.action === 'listConnections') {
+    
+          if (msg.message === 'Hello!') {
+            ws.isBot = true; // Set isBot to true if the bot sends the specific message
+            if (!leader) {
+              leader = ws;
+              ws.send(JSON.stringify({ action: "selectLeader", is_leader: true }));
+              console.log(`[${timestamp}] Bot ${ws.id} is now the leader.`);
+            } else {
+              ws.send(JSON.stringify({ action: "selectLeader", is_leader: false }));
+            }
+          } 
+          
+          else if (msg.action === 'listConnections') {
             const connections = Array.from(wss.clients)
               .filter(client => client.readyState === WebSocket.OPEN)
               .map(client => ({ id: client.id }));
             ws.send(JSON.stringify({ connections: connections }));
-          } else if (msg.action === 'closeConnection') {
+          } 
+          
+          else if (msg.action === 'closeConnection') {
             const { connId } = msg;
             const clientToClose = Array.from(wss.clients)
               .find(client => client.id === connId);
@@ -46,7 +53,9 @@ module.exports = (wss) => {
               console.log(`[${closeTimestamp}] Closing connection: ${connId}`);
               clientToClose.close();
             }
-          } else if (msg.action === 'addBlock') {
+          } 
+          
+          else if (msg.action === 'addBlock') {
             const blockchainActionMessage = {
               action: "addBlock",
               data: msg.data,
@@ -56,7 +65,9 @@ module.exports = (wss) => {
                 client.send(JSON.stringify(blockchainActionMessage));
               }
             });
-          } else if (msg.action === 'broadcastTransaction') {
+          } 
+          
+          else if (msg.action === 'broadcastTransaction') {
             const transaction = msg.data;
             console.log('Received broadcastTransaction action with data:', transaction);
 
@@ -66,28 +77,37 @@ module.exports = (wss) => {
                 client.send(JSON.stringify({ action: "vote", data: transaction }));
               }
             });
-          } else if (msg.action === 'vote') {
+          } 
+          
+          else if (msg.action === 'vote') {
             if (leader && leader.readyState === WebSocket.OPEN) {
               leader.send(JSON.stringify({ action: "vote", vote: msg.vote }));
             }
-          } else if (msg.action === 'requestData') {
+          } 
+          
+          else if (msg.action === 'requestData') {
             const { query } = msg;
             wss.clients.forEach((client) => {
               if (client !== ws && client.readyState === WebSocket.OPEN) {
                 client.send(JSON.stringify({ action: "requestData", query: query }));
               }
             });
-          } else if (msg.action === 'dataResponse') {
+          } 
+          
+          else if (msg.action === 'dataResponse') {
             if (ws === leader) {
               ws.send(JSON.stringify({ action: "dataResponse", data: msg.data }));
             }
-          } else {
+          } 
+          
+          else {
             wss.clients.forEach((client) => {
               if (client !== ws && client.readyState === WebSocket.OPEN) {
                 client.send(message);
               }
             });
           }
+
         } catch (e) {
           console.log(`[${timestamp}] Received a non-JSON message: ${message}`);
         }
@@ -96,11 +116,11 @@ module.exports = (wss) => {
       ws.on('close', () => {
         const closeTimestamp = new Date().toLocaleString();
         console.log(`[${closeTimestamp}] Client disconnected: ${connectionId}`);
-
+    
         if (ws === leader) {
           leader = null;
           wss.clients.forEach((client) => {
-            if (client.readyState === WebSocket.OPEN) {
+            if (client.isBot && client.readyState === WebSocket.OPEN) {
               leader = client;
               client.send(JSON.stringify({ action: "selectLeader", is_leader: true }));
               console.log(`[${closeTimestamp}] Bot ${client.id} is now the leader.`);
@@ -172,9 +192,27 @@ module.exports = (wss) => {
           });
           messageHandlers.clear();
         }
-      } // end of requestData()
+      }, // end of requestData()
       
 
-    
+      addPatient: (req, res) => {
+        const patientData = {
+          patient_id: req.body.patient_id,
+          name: req.body.name,
+          age: parseInt(req.body.age),
+          condition: req.body.condition
+        };
+  
+        wss.clients.forEach((client) => {
+          if (client.readyState === WebSocket.OPEN) {
+            client.send(JSON.stringify({ action: "addBlock", data: patientData }));
+          }
+        });
+  
+        res.redirect('/');
+      } // end of addPatient()
+
+
+
+    };
   };
-};

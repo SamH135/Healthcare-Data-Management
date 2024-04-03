@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="/styles.css">
+    <title>Single Patient Data</title>
+</head>
+<body>
+<nav>
+    <h4>Healthcare Data Management System</h4>
+    <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="/manage-nodes">Manage Nodes</a></li>
+        <li><a href="/condition-proportion">Condition Proportion</a></li>
+        <li><a href="/condition-by-age-group">Condition by Age Group</a></li>
+        <li><a href="/input-data">Add Patient Data</a></li>
+    </ul>
+</nav>
+
+<div class="container mt-4">
+    <h2>Single Patient Data</h2>
+    <form id="patientDataForm">
+        <input type="text" name="patientName" placeholder="Enter patient name">
+        <button type="submit">Get Patient Data</button>
+    </form>
+    <table id="patientDataTable" class="table">
+        <thead>
+        <tr>
+            <th>Timestamp</th>
+            <th>Patient ID</th>
+            <th>Name</th>
+            <th>Age</th>
+            <th>Condition</th>
+        </tr>
+        </thead>
+        <tbody>
+        <!-- Patient data will be dynamically populated here -->
+        </tbody>
+    </table>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+<script src="https://d3js.org/d3.v6.min.js"></script>
+<script src="/js/data-visualization.js"></script>
+</body>
+</html>

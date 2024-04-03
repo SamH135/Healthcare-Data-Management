@@ -3,97 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebSocket Client</title>
-    <style>
-        body { font-family: Arial, sans-serif; }
-        #messages { margin-bottom: 20px; border: 1px solid #ddd; padding: 10px; }
-        #connections { margin-bottom: 20px; padding: 10px; }
-    </style>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="/styles.css">
+    <title>Blockchain Healthcare Data Management System</title>
 </head>
 <body>
-    <h2>WebSocket Test Client</h2>
-    <div id="messages"></div>
-    <div id="connections"><h3>Active Connections</h3></div>
-    <input type="text" id="messageInput" placeholder="Type your message here..." />
-    <button onclick="sendMessage()">Send Message</button>
-    <button onclick="closeConnection()">Close My Connection</button>
+<nav>
+    <h4>Healthcare Data Management System</h4>
+    <ul>
+        <li><a href="/">Home</a></li>
+        <li><a href="/manage-nodes">Manage Nodes</a></li>
+        <li><a href="/single-patient-data">Single Patient Data</a></li>
+        <li><a href="/condition-proportion">Condition Proportion</a></li>
+        <li><a href="/condition-by-age-group">Condition by Age Group</a></li>
+        <li><a href="/input-data">Add Patient Data</a></li>
+    </ul>
+</nav>
 
-    <script>
-        var ws;
+<div class="container mt-4">
+    <div class="jumbotron">
+        <h1 class="display-4">Blockchain Project - Home Page</h1>
+        <p class="lead">This application uses a websocket server to connect with python bots (running on separate machines) that act similar to blockchain nodes.</p>
+        <p class ="lead">The bots can do the following...
+            <ol>
+                <li>Maintain their own copy of the blockchain that contains medical data for patients</li>
+                <li>Perform read/write operations on their copy of the chain</li>
+                <li>Perform various search operations to provide data visualizations based on data in the chain</li>
+                <li>Implement a simple form of smart contracts to validate all new patient data before adding it to the chain</li>
+                <li>Initiate voting in order to come to consensus on changes made to the blockchain</li>
+                <li>Store their chain in files locally on the machine they're running on for data persistence</li>
+            </ol>
+        </p>
+        <hr class="my-4">
+        <p>NOTE: while the server is deployed on render.com, if no bots are connected then the server will not be able to get data to generate visualizations
+            you can find the script to run a bot on your own machine at <a href="https://github.com/SamH135/Healthcare-Data-Management/blob/master/model/BlockchainNode.py">https://github.com/SamH135/Healthcare-Data-Management/blob/master/model/BlockchainNode.py</a>
+        </p>
 
-        function connect() {
-            ws = new WebSocket('ws://localhost:3000');
+        <p class="lead">
+            <a class="btn btn-primary btn-lg" href="#" role="button">Learn more</a>
+        </p>
+    </div>
+</div>
 
-            ws.onopen = function(event) {
-                logMessage('Connected to the server.');
-                // Request the server for the list of connections
-                ws.send(JSON.stringify({ action: "listConnections" }));
-            };
-
-            ws.onmessage = function(event) {
-                // Check if the message is about connections
-                try {
-                    const data = JSON.parse(event.data);
-                    if(data.connections) {
-                        updateConnectionsList(data.connections);
-                    } else {
-                        logMessage('From Server: ' + event.data);
-                    }
-                } catch(e) {
-                    logMessage('From Server: ' + event.data);
-                }
-            };
-
-            ws.onclose = function(event) {
-                logMessage('Disconnected from the server.');
-            };
-
-            ws.onerror = function(event) {
-                logMessage('Error: ' + event.data);
-            };
-        }
-
-        function sendMessage() {
-            var message = document.getElementById('messageInput').value;
-            if (message && ws) {
-                ws.send(message);
-                logMessage('To Server: ' + message);
-                document.getElementById('messageInput').value = ''; // Clear input after sending
-            }
-        }
-
-        function closeConnection() {
-            if (ws) {
-                ws.close();
-                logMessage('Connection closed.');
-            }
-        }
-
-        function logMessage(message) {
-            var messagesDiv = document.getElementById('messages');
-            messagesDiv.innerHTML += message + '<br/>';
-            messagesDiv.scrollTop = messagesDiv.scrollHeight; // Scroll to the bottom
-        }
-
-        function updateConnectionsList(connections) {
-            const connectionsDiv = document.getElementById('connections');
-            connectionsDiv.innerHTML = '<h3>Active Connections</h3>'; // Reset list
-            connections.forEach(conn => {
-                connectionsDiv.innerHTML += `<div>${conn.id} - <button onclick="requestCloseConnection('${conn.id}')">Close</button></div>`;
-            });
-        }
-
-        function requestCloseConnection(connId) {
-            if (ws) {
-                ws.send(JSON.stringify({ action: "closeConnection", connId: connId }));
-                logMessage(`Requested to close connection ${connId}`);
-            }
-        }
-
-        // Automatically connect when the page loads
-        window.onload = function() {
-            connect();
-        };
-    </script>
+<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
 </body>
 </html>

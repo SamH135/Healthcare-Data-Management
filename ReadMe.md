@@ -1,4 +1,4 @@
-**THE SERVER IS CURRENTLY DEPLOYED ON RENDER.COM**
+**THE SERVER IS CURRENTLY DEPLOYED ON [RENDER.COM](https://healthcare-data-management.onrender.com/)**
 
 *USAGE*
 

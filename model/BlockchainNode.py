@@ -84,63 +84,75 @@ class Blockchain:
 
     # find all data related to a single patient
     def search_patient_data(self, search_term):
-        # Convert search_term to lowercase for case-insensitive search
+        # Convert search_term to lowercase for case-insensitive search without removing spaces
         search_term = search_term.lower()
-        patient_data = defaultdict(lambda: {"data": {"condition": set()}})  # Use defaultdict for easy accumulation of data
+        patient_data = defaultdict(lambda: {"data": {"condition": set()}})
 
         for block in self.chain:
-            # Convert stored name and patient ID to lowercase for case-insensitive comparison
+            # Convert stored name and patient ID to lowercase for case-insensitive comparison without removing spaces
             name = block.data.get("name", "").lower()
             patient_id = block.data.get("patient_id", "").lower()
-            if search_term in (name, patient_id):
-                patient_id = block.data.get("patient_id")
-                patient_record = patient_data[patient_id]
-                patient_record["timestamp"] = block.timestamp  # Keep track of the latest timestamp
-                # Update the patient record with the latest data, max() used for age to keep the highest age reported
+
+            # Adjusted search logic: Check if the search_term is a substring of name or patient_id
+            if search_term in name or search_term in patient_id:
+                patient_id_actual = block.data.get("patient_id")
+                patient_record = patient_data[patient_id_actual]
+                patient_record["timestamp"] = block.timestamp
                 patient_record["data"].update({
-                    "patient_id": patient_id,
+                    "patient_id": patient_id_actual,
                     "name": block.data.get("name"),
-                    "age": max(patient_record["data"].get("age", 0), block.data.get("age"))
+                    "age": max(patient_record["data"].get("age", 0), block.data.get("age")),
                 })
-                patient_record["data"]["condition"].add(block.data.get("condition"))  # Add condition to a set to avoid duplicates
+                patient_record["data"]["condition"].add(block.data.get("condition"))
 
         consolidated_data = []
         for data in patient_data.values():
-            data["data"]["condition"] = ", ".join(data["data"]["condition"])  # Convert set of conditions to a string
+            data["data"]["condition"] = ", ".join(data["data"]["condition"])
             consolidated_data.append(data)
 
         return consolidated_data
 
     # get data to make a bar plot for condition by age group
     def search_condition_by_age_group(self, condition):
-        # Convert condition to lowercase for case-insensitive comparison
-        condition = condition.lower()
-        age_groups = {i: 0 for i in range(0, 110, 10)}  # Predefine age groups
+        # Normalize the search condition by converting it to lowercase and removing spaces for comparison
+        normalized_condition = condition.lower().replace(" ", "")
+        age_groups = {i: 0 for i in range(0, 110, 10)}
+
         for block in self.chain:
-            # Check condition in a case-insensitive manner
-            if block.data.get("condition", "").lower() == condition:
+            # Normalize the condition from the block for comparison
+            block_condition = block.data.get("condition", "").lower().replace(" ", "")
+
+            if normalized_condition == block_condition:
                 age = block.data.get("age")
-                age_group = (age // 10) * 10  # Determine the age group
-                age_groups[age_group] += 1  # Increment the count for the age group
+                age_group = (age // 10) * 10
+                age_groups[age_group] += 1
+
         return {"condition": condition, "age_groups": age_groups}
 
     # get data to generate a pie chart for the proportion of people with a searched condition
     def search_condition_proportion(self, condition):
-        # Convert condition to lowercase for case-insensitive comparison
-        condition = condition.lower()
-        patient_ids = set()  # To track unique patients
-        patients_with_condition = set()  # To track unique patients with the specified condition
+        # Normalize the search condition by converting it to lowercase and removing spaces for comparison
+        normalized_condition = condition.lower().replace(" ", "")
+        patient_ids = set()
+        patients_with_condition = set()
 
         for block in self.chain:
             patient_id = block.data.get("patient_id")
             name = block.data.get("name")
-            patient_tuple = (patient_id, name)  # Create a tuple of patient ID and name for uniqueness
-            patient_ids.add(patient_tuple)
-            if block.data.get("condition", "").lower() == condition:
-                patients_with_condition.add(patient_tuple)  # Add to set if condition matches
+            patient_tuple = (patient_id, name)  # Tuple for uniqueness
 
-        total_people = len(patient_ids)  # Count of unique patients
-        people_with_condition = len(patients_with_condition)  # Count of unique patients with the specified condition
+            # Add patient_tuple to patient_ids to track unique patients
+            patient_ids.add(patient_tuple)
+
+            # Normalize the condition from the block for comparison
+            block_condition = block.data.get("condition", "").lower().replace(" ", "")
+
+            # Compare normalized conditions
+            if normalized_condition == block_condition:
+                patients_with_condition.add(patient_tuple)
+
+        total_people = len(patient_ids)
+        people_with_condition = len(patients_with_condition)
         return {"condition": condition, "people_with_condition": people_with_condition, "total_people": total_people}
 
 
@@ -150,11 +162,20 @@ class Bot:
         self.blockchain = Blockchain("blockchain.pkl")
 
     async def connect(self, uri):
-        uri = "ws://localhost:3000"
+        # for local testing - make sure the port value matches what you have it set to in the server
+        # uri = "ws://localhost:3000"
+
+        # for deployment - the server should be running on render.com
+        uri = "wss://healthcare-data-management.onrender.com"
 
         try:
             async with websockets.connect(uri) as websocket:
                 await websocket.send(json.dumps({"message": "Hello!"}))
+
+                if uri == "wss://healthcare-data-management.onrender.com":
+                    print("bot connected to render.com server\n")
+                else:
+                    print("bot connected to local host server\n")
 
                 while True:
                     # listen for responses from the server
@@ -229,6 +250,23 @@ class Bot:
                         elif data["action"] == "consensus":
                             if data["reached"]:
                                 self.blockchain.add_block(data["data"])
+
+                        # Handle chain length request
+                        elif data["action"] == "chainLengthRequest":
+                            chain_length = len(self.blockchain.chain)
+                            await websocket.send(json.dumps({"action": "chainLengthResponse", "length": chain_length}))
+
+                        # Handle chain data request
+                        elif data["action"] == "chainDataRequest":
+                            chain_data = [block.__dict__ for block in self.blockchain.chain]
+                            await websocket.send(json.dumps({"action": "chainDataResponse", "data": chain_data}))
+
+                        # Handle received chain data
+                        elif data["action"] == "chainDataBroadcast":
+                            received_chain = [Block(**block) for block in data["data"]]
+                            if len(received_chain) > len(self.blockchain.chain):
+                                self.blockchain.chain = received_chain
+                                self.blockchain.save_chain()
 
                         else:
                             print("Unknown JSON action:", data["action"])

@@ -36,6 +36,7 @@
        (Make sure to keep the file structure)
 
 *Client-Side*
+
     2 Types of clients: python bots (act like blockchain nodes), regular users (https connections through the front-end)
 
     Bots are Python scripts that connect to the server via websockets using the `websockets` library. They are used for pulling data from blockchains when a client requests data from the web app. 

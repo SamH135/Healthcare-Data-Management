@@ -1,6 +1,6 @@
 **THE SERVER IS CURRENTLY DEPLOYED ON [RENDER.COM](https://healthcare-data-management.onrender.com/)**
 
-*USAGE*
+*Usage*
 
     To use the web app, you must connect a `BlockchainNode.py` bot to the server. 
     The code is provided in the "model" directory of this repo.
@@ -11,6 +11,32 @@
 
     NOTE: you can add data to a connected bot through the web app (Add Patient Data menu option) or download the `blockchain.pkl` file 
           so that the bot can search and pull data to the satisfy requests from the server.
+
+*Architecture*
+
+The architecture consists of three main components:
+
+1. Client-side:
+Regular users: Interact with the web app built with Node.js, Express, and D3.js via a front-end connection through HTTPS.
+
+Python script nodes: Run independently and use the server to communicate with other nodes via WebSockets.
+
+2. Server-side:
+Node.js server: Acts as a relay between users and nodes.
+Pulls data from nodes based on user requests.
+Processes and visualizes data using D3.js visualizations.
+Broadcasts messages between nodes using the ws (WebSocket) javascript framework.
+
+
+3. Blockchain:
+Python script nodes: Each node maintains a copy of the medical data blockchain.
+Nodes implement consensus algorithms for data validation and consistency.
+Nodes implement smart contracts.
+The node encrypts the data with AES-256 before adding it to the blockchain for data security/integrity. 
+When the server requests the data, the node decrypts it from the blockchain, processes it, and sends it to the server.
+Each node has functions implemented to connect to the server and send/receive messages from the network via WebSockets.
+
+
 
 *To Set Up Server-Side On localhost - For Testing*
 
